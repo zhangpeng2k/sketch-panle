@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>涂鸦画板</title>
+  <style type="text/css">
+    * {
+      margin: 0px;
+      padding: 0px;
+    }
+
+    .control {
+      width: 140px;
+      height: 100%;
+      background: #666;
+      float: left;
+    }
+
+    .panel {
+      width: 1024px;
+      background: #ffffff;
+      float: left;
+    }
+
+    .Canvas1 {
+      border: 1px solid #000000;
+      margin: 0px auto;
+    }
+
+    #penC0 {
+      color: Black;
+    }
+
+    #penC1 {
+      color: red;
+    }
+
+    #penC2 {
+      color: green;
+    }
+
+    #penC3 {
+      color: blue;
+    }
+
+    button,
+    input {
+      width: 100px;
+      height: 30px;
+      border-radius: 5px;
+      border: 3px solid rgba(0, 0, 0, 0.5);
+
+    }
+  </style>
+</head>
+
+<body>
+  <div class="control">
+    <h1>涂鸦画板</h1>
+    <br />
+    <h2>操作</h2>
+    <button id="saveBtn">保存为图片</button>
+    <button id="clearBtn">清空画板</button>
+    <h2>画笔大小</h2>
+    <div id="penW">
+      <button id="penW0">细</button>
+      <button id="penW1">中</button>
+      <button id="penW2">粗</button>
+      <button id="penW3">超粗</button>
+    </div>
+    <h2>画笔颜色</h2>
+    <div id="penC">
+      <button id="penC0">Black</button>
+      <button id="penC1">Red</button>
+      <button id="penC2">Green</button>
+      <button id="penC3">Blue</button>
+    </div>
+    <h2>工具</h2>
+    <input type="button" value="橡皮擦" id="Eraser"></input>
+  </div>
+  <div class="panel">
+    <canvas id="myCanvas" class="Canvas1"></canvas>
+  </div>
+
+  <script type="text/javascript">
+    window.onload = function () {
+      var myCanvas = document.getElementById("myCanvas");
+
+      myCanvas.width = 1024;
+      myCanvas.height = 768;
+
+      var cxt = myCanvas.getContext("2d");
+
+
+      var penColor = "black";
+      var penWidth = 3;
+      var isEraser = false; //是否正在使用橡皮擦
+      const penWidthList = [3, 10, 20, 50];
+      const penColorList = ["black","red", "green", "blue"];
+
+
+      var penWBList = document.getElementById("penW").getElementsByTagName("button");
+
+      for (let i = 0; i < penWBList.length; i++) {
+        let newPenWB = penWBList[i];
+        newPenWB.onclick = () => penWidth = penWidthList[i];
+      }
+
+      var penCBList = document.getElementById("penC").getElementsByTagName("button");
+
+      for (let i = 0; i < penCBList.length; i++) {
+        let newPenCB = penCBList[i];
+        newPenCB.onclick = () => penColor = penColorList[i];
+
+      }
+
+      var eraserBtn = document.getElementById("Eraser");
+      eraserBtn.onclick = function () {
+        isEraser = !isEraser;
+        if (isEraser) {
+          eraserBtn.value = "正在使用橡皮擦";
+        } else {
+          eraserBtn.value = "橡皮擦";
+        }
+
+      }
+
+      myCanvas.onmousedown = function (e) {
+        var start_x = e.clientX - myCanvas.offsetLeft + document.body.scrollLeft;
+        //焦点位置 - canvas 距离document边缘的位置 + document的X轴距离
+        var start_y = e.clientY - myCanvas.offsetTop + document.body.scrollTop;
+
+        console.log("鼠标down");
+
+        if (isEraser) { //没有使用橡皮擦功能
+          cxt.clearRect(start_x - (penWidth / 2), start_y - (penWidth / 2), penWidth, penWidth);
+
+        } else { //正在使用橡皮擦
+          cxt.beginPath();
+          cxt.moveTo(start_x, start_y);
+
+          cxt.lineWidth = penWidth;
+          cxt.strokeStyle = penColor;
+
+          cxt.lineTo(start_x, start_y);
+          cxt.stroke();
+        }
+
+
+        myCanvas.onmousemove = function (e) {
+
+          var move_x = e.clientX - myCanvas.offsetLeft + document.body.scrollLeft;
+          //焦点x轴绝对位置 - canvas 距离document边缘的距离 + document的X轴距离
+          var move_y = e.clientY - myCanvas.offsetTop + document.body.scrollTop;
+
+
+          if (isEraser) { //没有使用橡皮擦功能
+            cxt.clearRect(move_x - (penWidth / 2), move_y - (penWidth / 2), penWidth, penWidth);
+          } else {
+            cxt.lineTo(move_x, move_y);
+            cxt.stroke();
+
+          }
+
+          console.log("鼠标move----" + move_x + "," + move_y);
+
+        }
+        myCanvas.onmouseup = function (e) {
+
+          cxt.closePath();
+          myCanvas.onmousemove = null;
+          myCanvas.onmouseup = null;
+          console.log("鼠标up");
+        }
+
+      }
+
+
+      //保存为图片
+      var btn_save = document.getElementById('saveBtn');
+      btn_save.onclick = function () {
+        download('png');
+      }
+
+      //清空画板
+      var btn_clear = document.getElementById('clearBtn');
+      btn_clear.onclick = function () {
+        var tempWidth = myCanvas.width;
+        myCanvas.width = myCanvas.height;
+        myCanvas.width = tempWidth;
+      }
+
+
+      //图片下载操作,指定图片类型
+      function download(type) {
+
+
+        //设置保存图片的类型
+        var imgdata = myCanvas.toDataURL(type);
+
+
+        //将mime-type改为image/octet-stream,强制让浏览器下载
+        var fixtype = function (type) {
+          type = type.toLocaleLowerCase().replace(/jpg/i, 'jpeg');
+          var r = type.match(/png|jpeg|bmp|gif/)[0];
+          return 'image/' + r;
+        }
+        imgdata = imgdata.replace(fixtype(type), 'image/octet-stream')
+        //将图片保存到本地
+        var saveFile = function (data, filename) {
+          var link = document.createElement('a');
+          link.href = data;
+          link.download = filename;
+          var event = document.createEvent('MouseEvents');
+          event.initMouseEvent('click', true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+          link.dispatchEvent(event);
+        }
+        var filename = new Date().toLocaleDateString() + '.' + type;
+        saveFile(imgdata, filename);
+      }
+      //图片下载功能参考地址（博客
+      //http://www.cnblogs.com/tianma3798/p/6121894.html
+
+    }
+  </script>
+</body>
+
+</html>
